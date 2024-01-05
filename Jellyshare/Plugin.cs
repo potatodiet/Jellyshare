@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
 using Jellyshare.Configuration;
 using Jellyshare.State;
 using MediaBrowser.Common.Configuration;
@@ -45,9 +46,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
     public Dictionary<Uri, RemoteServer> RemoteServers { get; private set; } = new();
 
-    public Dictionary<Guid, RemoteLibrary> RemoteLibraries { get; private set; } = new();
-
-    public Dictionary<Guid, Guid> RemoteVideos { get; private set; } = new();
+    public HashSet<Guid> RemoteVideos { get; private set; } = new();
 
     // Each (LocalUser, RemoteAddress) has an associated RemoteUser.
     public Dictionary<(Guid UserId, Uri RemoteAddress), Guid> UserMap { get; private set; } = new();
@@ -76,16 +75,23 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
     public async Task SaveState(CancellationToken cancellationToken)
     {
-        await SaveRemoteLibraries(cancellationToken);
         await SaveUserMap(cancellationToken);
     }
 
     public async Task LoadState(CancellationToken cancellationToken)
     {
         LoadRemoteServers();
-        LoadRemoteVideos();
-        await LoadRemoteLibraries(cancellationToken);
         await LoadUserMap(cancellationToken);
+    }
+
+    public void RefreshRemoteVideos()
+    {
+        var query = new InternalItemsQuery() { IncludeItemTypes = new[] { BaseItemKind.Movie } };
+        RemoteVideos = _libraryManager
+            .GetItemList(query)
+            .Where(item => item.HasProviderId("JellyshareRemoteAddress"))
+            .Select(item => item.Id)
+            .ToHashSet();
     }
 
     private void LoadRemoteServers()
@@ -101,57 +107,6 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             _logger.LogError("Failed to deserialize RemoteServers configuration.");
             _logger.LogError(ex.Message);
         }
-    }
-
-    private void LoadRemoteVideos()
-    {
-        foreach (var item in _libraryManager.GetItemList(new InternalItemsQuery()))
-        {
-            if (item.TryGetProviderId("Jellyshare", out var remoteIdStr))
-            {
-                if (Guid.TryParse(remoteIdStr, out var remoteId))
-                {
-                    RemoteVideos[item.Id] = remoteId;
-                }
-                else
-                {
-                    _logger.LogWarning(
-                        "Could not load {Name}, {Id}. Faild to create Guid from {RemoteId}.",
-                        item.Name,
-                        item.Id,
-                        remoteIdStr
-                    );
-                }
-            }
-        }
-    }
-
-    private async Task LoadRemoteLibraries(CancellationToken cancellationToken)
-    {
-        var path = Path.Combine(DataFolderPath, "state-remotelibraries.json");
-        if (!File.Exists(path))
-        {
-            return;
-        }
-        await using var state = File.OpenRead(path);
-        var remoteLibraries = await JsonSerializer.DeserializeAsync<
-            Dictionary<Guid, RemoteLibrary>
-        >(state, cancellationToken: cancellationToken);
-        if (remoteLibraries is not null)
-        {
-            RemoteLibraries = remoteLibraries;
-        }
-    }
-
-    private async Task SaveRemoteLibraries(CancellationToken cancellationToken)
-    {
-        var path = Path.Combine(DataFolderPath, "state-remotelibraries.json");
-        await using var stream = File.OpenWrite(path);
-        await JsonSerializer.SerializeAsync(
-            stream,
-            RemoteLibraries,
-            cancellationToken: cancellationToken
-        );
     }
 
     private async Task SaveUserMap(CancellationToken cancellationToken)

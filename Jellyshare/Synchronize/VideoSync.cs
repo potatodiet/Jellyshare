@@ -43,20 +43,20 @@ public class VideoSync
     public async Task SyncVideos(CancellationToken cancellationToken)
     {
         var localVideos = GetLocalVideos();
-        foreach (var library in Plugin.Instance!.RemoteLibraries.Values)
+        foreach (var library in GetLocalFolders())
         {
-            var libraryEntity = (Folder)_libraryManager.GetItemById(library.LocalId);
             var remoteVideos = await GetRemoteVideos(library, cancellationToken);
             foreach (var remoteVideo in remoteVideos)
             {
                 if (!localVideos.Contains(remoteVideo.Id))
                 {
-                    CreateVideo(remoteVideo, libraryEntity);
+                    CreateVideo(remoteVideo, library);
                     localVideos.Add(remoteVideo.Id);
                 }
             }
-            _ = _libraryManager.GetItemById(library.LocalId).RefreshMetadata(cancellationToken);
+            _ = library.RefreshMetadata(cancellationToken);
         }
+        Plugin.Instance!.RefreshRemoteVideos();
     }
 
     private void CreateVideo(BaseItemDto remoteVideo, Folder libraryEntity)
@@ -69,11 +69,17 @@ public class VideoSync
             new Movie()
             {
                 Id = itemId,
-                ProviderIds = { { "Jellyshare", remoteVideo.Id.ToString() } },
+                ProviderIds =
+                {
+                    { "JellyshareRemoteId", remoteVideo.Id.ToString() },
+                    {
+                        "JellyshareRemoteAddress",
+                        libraryEntity.GetProviderId("JellyshareRemoteAddress")
+                    }
+                },
                 Path = path
             }
         );
-        Plugin.Instance!.RemoteVideos[itemId] = remoteVideo.Id;
     }
 
     private HashSet<Guid> GetLocalVideos()
@@ -81,23 +87,34 @@ public class VideoSync
         var query = new InternalItemsQuery() { IncludeItemTypes = new[] { BaseItemKind.Movie } };
         return _libraryManager
             .GetItemList(query)
-            .Where(item => item.HasProviderId("Jellyshare"))
-            .Select(item => Guid.Parse(item.GetProviderId("Jellyshare")!))
+            .Where(item => item.HasProviderId("JellyshareRemoteId"))
+            .Select(item => Guid.Parse(item.GetProviderId("JellyshareRemoteId")!))
             .ToHashSet();
     }
 
     private async Task<IEnumerable<BaseItemDto>> GetRemoteVideos(
-        RemoteLibrary library,
+        Folder library,
         CancellationToken cancellationToken
     )
     {
-        var apiKey = Plugin.Instance!.RemoteServers[library.RemoteAddress].ApiKey;
-        var path = $"Items/?api_key={apiKey:N}&ParentId={library.ExternalId}";
+        var address = new Uri(library.GetProviderId("JellyshareRemoteAddress"));
+        var externalId = library.GetProviderId("JellyshareRemoteId");
+        var apiKey = Plugin.Instance!.RemoteServers[address].ApiKey;
+        var path = $"Items/?api_key={apiKey:N}&ParentId={externalId}";
         var videos = await _httpClient.GetFromJsonAsync<QueryResult<BaseItemDto>>(
-            new Uri(library.RemoteAddress, path),
+            new Uri(address, path),
             JsonDefaults.Options,
             cancellationToken
         );
         return videos!.Items;
+    }
+
+    private IEnumerable<Folder> GetLocalFolders()
+    {
+        var query = new InternalItemsQuery() { IncludeItemTypes = new[] { BaseItemKind.Folder } };
+        return _libraryManager
+            .GetItemList(query)
+            .Where(folder => folder.HasProviderId("JellyshareRemoteAddress"))
+            .Cast<Folder>();
     }
 }

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -39,9 +40,9 @@ public class StreamHijackController : ControllerBase
     )
     {
         var item = _libraryManager.GetItemById(itemId)!;
-        var remoteAddress = Plugin.Instance!.RemoteLibraries[item.GetParent().Id].RemoteAddress;
+        var remoteAddress = new Uri(item.GetProviderId("JellyshareRemoteAddress"));
         var remoteUser = Plugin.Instance!.UserMap[(userId, remoteAddress)];
-        var remoteId = Plugin.Instance!.RemoteVideos[itemId];
+        var remoteId = Guid.Parse(item.GetProviderId("JellyshareRemoteId"));
 
         var path = $"Items/{remoteId}/PlaybackInfo";
         var query = HttpUtility.ParseQueryString(HttpContext.Request.QueryString.ToString());
@@ -73,8 +74,8 @@ public class StreamHijackController : ControllerBase
     public async Task<ActionResult> HlsHijack([FromRoute] Guid itemId, [FromRoute] string remainder)
     {
         var item = _libraryManager.GetItemById(itemId)!;
-        var remoteAddress = Plugin.Instance!.RemoteLibraries[item.GetParent().Id].RemoteAddress;
-        var remoteId = Plugin.Instance!.RemoteVideos[itemId];
+        var remoteAddress = new Uri(item.GetProviderId("JellyshareRemoteAddress"));
+        var remoteId = Guid.Parse(item.GetProviderId("JellyshareRemoteId"));
 
         var path = $"Videos/{remoteId}/{remainder}";
 

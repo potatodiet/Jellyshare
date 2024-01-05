@@ -90,15 +90,6 @@ public class LibrarySync
         );
         Directory.CreateDirectory(path);
 
-        var localId = _libraryManager.GetNewItemId(path, typeof(Folder));
-        /*var folder = new Folder()
-        {
-            Id = localId,
-            Path = path,
-            ProviderIds = { { "JellyshareRemoteAddress", remoteAddress.ToString() } }
-        };
-        _libraryManager.CreateItem(folder, folder);*/
-
         _libraryManager.AddVirtualFolder(
             name,
             collectionType,
@@ -112,19 +103,19 @@ public class LibrarySync
                     {
                         Type = "Movie",
                         MetadataFetchers = new[] { "Jellyshare" },
-                        ImageFetchers = new[] { "Jellyshare" }
+                        ImageFetchers = new[] { "Jellyshare" },
                     }
-                }
+                },
+                PathInfos = new[] { new MediaPathInfo() { Path = path } }
             },
             true
         );
-        _libraryManager.AddMediaPath(name, new MediaPathInfo() { Path = path });
 
-        Plugin.Instance!.RemoteLibraries[localId] = new RemoteLibrary()
+        var localId = _libraryManager.GetNewItemId(path, typeof(Folder));
+        _libraryManager.GetItemById(localId).ProviderIds = new()
         {
-            LocalId = localId,
-            ExternalId = remoteLibrary.Id,
-            RemoteAddress = remoteAddress
+            { "JellyshareRemoteAddress", remoteAddress.ToString() },
+            { "JellyshareRemoteId", remoteLibrary.Id.ToString() },
         };
     }
 

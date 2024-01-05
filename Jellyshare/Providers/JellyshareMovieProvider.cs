@@ -55,15 +55,21 @@ public class JellyShareProvider : IRemoteMetadataProvider<Movie, MovieInfo>, IHa
             info.Path
         );
 
-        if (!info.TryGetProviderId("Jellyshare", out var remoteIdStr))
+        if (!info.TryGetProviderId("JellyshareRemoteId", out var remoteIdStr))
         {
-            throw new InvalidDataException("The Movie must have a Jellyshare Provider ID.");
+            throw new InvalidDataException("The Movie must have a JellyshareRemoteId Provider ID.");
+        }
+        if (!info.TryGetProviderId("JellyshareRemoteAddress", out var remoteAddressStr))
+        {
+            throw new InvalidDataException(
+                "The Movie must have a JellyshareRemoteAddress Provider ID."
+            );
         }
         var remoteId = Guid.Parse(remoteIdStr);
+        var remoteAddress = new Uri(remoteAddressStr);
 
         var query = new InternalItemsQuery() { Path = info.Path };
         var item = _libraryManager.GetItemList(query).First();
-        var remoteAddress = Plugin.Instance!.RemoteLibraries[item.GetParent().Id].RemoteAddress;
 
         var userId = Plugin
             .Instance!.UserMap.First(pair => pair.Key.RemoteAddress == remoteAddress)
@@ -94,7 +100,6 @@ public class JellyShareProvider : IRemoteMetadataProvider<Movie, MovieInfo>, IHa
                 PremiereDate = remoteVideo.PremiereDate,
                 Genres = remoteVideo.Genres,
                 RunTimeTicks = remoteVideo.RunTimeTicks,
-                ProviderIds = { { "Jellyshare", remoteIdStr } },
                 Tags = remoteVideo.Tags,
                 CommunityRating = remoteVideo.CommunityRating,
                 CriticRating = remoteVideo.CriticRating,

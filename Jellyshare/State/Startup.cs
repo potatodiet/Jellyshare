@@ -10,7 +10,6 @@ public class Startup : IServerEntryPoint
     public void Dispose()
     {
         Plugin.Instance?.RemoteVideos.Clear();
-        Plugin.Instance?.RemoteLibraries.Clear();
         Plugin.Instance?.UserMap.Clear();
         GC.SuppressFinalize(this);
     }

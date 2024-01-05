@@ -19,7 +19,7 @@ public class HijackConstraint : IActionConstraint
         {
             if (Guid.TryParse(match?.Value, out var id))
             {
-                if (items.ContainsKey(id))
+                if (items.Contains(id))
                 {
                     return true;
                 }

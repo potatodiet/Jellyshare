@@ -33,8 +33,8 @@ public class JellyshareImageProvider : IRemoteImageProvider, IHasOrder
         CancellationToken cancellationToken
     )
     {
-        var externalId = Plugin.Instance!.RemoteVideos[item.Id];
-        var address = Plugin.Instance!.RemoteLibraries[item.GetParent().Id].RemoteAddress;
+        var externalId = item.GetProviderId("JellyshareRemoteId");
+        var address = item.GetProviderId("JellyshareRemoteAddress");
         return new[]
         {
             new RemoteImageInfo
