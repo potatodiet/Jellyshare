@@ -77,7 +77,8 @@ public class VideoSync
                         libraryEntity.GetProviderId("JellyshareRemoteAddress")
                     }
                 },
-                Path = path
+                Path = path,
+                RunTimeTicks = remoteVideo.RunTimeTicks
             }
         );
     }

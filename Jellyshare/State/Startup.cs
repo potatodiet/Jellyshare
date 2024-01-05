@@ -17,5 +17,6 @@ public class Startup : IServerEntryPoint
     public async Task RunAsync()
     {
         await Plugin.Instance!.LoadState(CancellationToken.None);
+        Plugin.Instance!.RefreshRemoteVideos();
     }
 }

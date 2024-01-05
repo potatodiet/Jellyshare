@@ -44,7 +44,6 @@ public class SyncTask : IScheduledTask
     {
         await _librarySync.SyncLibraries(cancellationToken);
         await _userSync.SyncUsers(cancellationToken);
-        await Task.Delay(10000, cancellationToken); // Ensure the remote libraries are saved before creating the remote videos.
         await _videoSync.SyncVideos(cancellationToken);
         await Plugin.Instance!.SaveState(cancellationToken);
     }
