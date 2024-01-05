@@ -65,8 +65,12 @@
             ApiClient.getPluginConfiguration(
               TemplateConfig.pluginUniqueId
             ).then(function (config) {
-              config.RemoteServersRaw =
-                document.querySelector("#RemoteServers").value;
+              config.RemoteServersRaw = document
+                .querySelector("#RemoteServers")
+                .value.replaceAll(
+                  /([0-z]{8})([0-z]{4})([0-z]{4})([0-z]{4})([0-z]{12})/g,
+                  "$1-$2-$3-$4-$5"
+                );
               ApiClient.updatePluginConfiguration(
                 TemplateConfig.pluginUniqueId,
                 config

@@ -1,7 +1,11 @@
+using System;
+using System.Collections.Generic;
+
 namespace Jellyshare.State;
 
 public class RemoteServer
 {
-    public string Address { get; set; } = string.Empty;
-    public string ApiKey { get; set; } = string.Empty;
+    public Uri Address { get; set; }
+    public Guid ApiKey { get; set; }
+    public IEnumerable<string> Libraries { get; set; }
 }

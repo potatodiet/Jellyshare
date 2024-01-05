@@ -45,7 +45,7 @@ public class StreamHijackController : ControllerBase
 
         var path = $"Items/{remoteId}/PlaybackInfo";
         var query = HttpUtility.ParseQueryString(HttpContext.Request.QueryString.ToString());
-        query["api_key"] = Plugin.Instance!.RemoteServers[remoteAddress].ToString("N");
+        query["api_key"] = Plugin.Instance!.RemoteServers[remoteAddress].ApiKey.ToString("N");
         query["UserId"] = remoteUser.ToString("N");
         query["MediaSourceId"] = remoteId.ToString("N");
 

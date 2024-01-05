@@ -42,11 +42,13 @@ more instances if needed.
     [
     {
         "Address": "http://jellyfin_2:8096/",
-        "ApiKey": "618bb6933b1540bf8916a4ca30096ccc"
+        "ApiKey": "618bb6933b1540bf8916a4ca30096ccc",
+        "Libraries": ["Movies"]
     },
     {
         "Address": "http://jellyfin_3:8096/",
         "ApiKey": "c4b477a7cd544f1693fb459f0cd51c75"
+        "Libraries": ["Movies"]
     }
     ]
 

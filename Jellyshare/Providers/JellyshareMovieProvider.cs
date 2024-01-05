@@ -68,7 +68,7 @@ public class JellyShareProvider : IRemoteMetadataProvider<Movie, MovieInfo>, IHa
         var userId = Plugin
             .Instance!.UserMap.First(pair => pair.Key.RemoteAddress == remoteAddress)
             .Value;
-        var apiKey = Plugin.Instance!.RemoteServers[remoteAddress];
+        var apiKey = Plugin.Instance!.RemoteServers[remoteAddress].ApiKey;
         var address = new Uri(
             remoteAddress,
             $"/Users/{userId}/Items/{remoteId}?api_key={apiKey:N}"

@@ -1,6 +1,4 @@
 using System;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Library;
 
 namespace Jellyshare.State;
 

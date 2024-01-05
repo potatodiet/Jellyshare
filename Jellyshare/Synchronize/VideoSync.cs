@@ -91,7 +91,7 @@ public class VideoSync
         CancellationToken cancellationToken
     )
     {
-        var apiKey = Plugin.Instance!.RemoteServers[library.RemoteAddress];
+        var apiKey = Plugin.Instance!.RemoteServers[library.RemoteAddress].ApiKey;
         var path = $"Items/?api_key={apiKey:N}&ParentId={library.ExternalId}";
         var videos = await _httpClient.GetFromJsonAsync<QueryResult<BaseItemDto>>(
             new Uri(library.RemoteAddress, path),

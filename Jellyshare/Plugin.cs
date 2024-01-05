@@ -43,7 +43,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
     public static Plugin? Instance { get; private set; }
 
-    public Dictionary<Uri, Guid> RemoteServers { get; private set; } = new();
+    public Dictionary<Uri, RemoteServer> RemoteServers { get; private set; } = new();
 
     public Dictionary<Guid, RemoteLibrary> RemoteLibraries { get; private set; } = new();
 
@@ -94,17 +94,12 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         {
             RemoteServers = JsonSerializer
                 .Deserialize<List<RemoteServer>>(Configuration.RemoteServersRaw)
-                .ToDictionary(pair => new Uri(pair.Address), pair => Guid.Parse(pair.ApiKey));
+                .ToDictionary(server => server.Address, server => server);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _logger.LogError("Failed to deserialize RemoteServers configuration.");
-        }
-
-        _logger.LogInformation($"LoadState: {Configuration.RemoteServersRaw}");
-        foreach (var (remoteAddress, apiKey) in RemoteServers)
-        {
-            _logger.LogInformation($"Plugin: {remoteAddress}");
+            _logger.LogError(ex.Message);
         }
     }
 

@@ -40,21 +40,21 @@ public class LibrarySync
     public async Task SyncLibraries(CancellationToken cancellationToken)
     {
         var instance = Plugin.Instance!;
-        foreach (var (remoteAddress, apiKey) in instance.RemoteServers)
+        foreach (var server in instance.RemoteServers.Values)
         {
             var remoteLibraries = await GetRemoteLibraries(
-                remoteAddress,
-                apiKey,
+                server.Address,
+                server.ApiKey,
                 cancellationToken
             );
             var localLibraries = GetLocalLibraries();
 
             foreach (var remoteLibrary in remoteLibraries)
             {
-                var name = $"{remoteAddress.Host} {remoteLibrary.Name}";
+                var name = $"{server.Address.Host} {remoteLibrary.Name}";
                 if (!localLibraries.Contains(name))
                 {
-                    CreateLocalLibrary(remoteLibrary, remoteAddress);
+                    CreateLocalLibrary(remoteLibrary, server.Address);
                     localLibraries.Add(name);
                 }
             }
@@ -90,12 +90,14 @@ public class LibrarySync
         );
         Directory.CreateDirectory(path);
 
-        var folder = new Folder()
+        var localId = _libraryManager.GetNewItemId(path, typeof(Folder));
+        /*var folder = new Folder()
         {
+            Id = localId,
             Path = path,
-            ProviderIds = { { "JellyshareRemoteAddress", "" } }
+            ProviderIds = { { "JellyshareRemoteAddress", remoteAddress.ToString() } }
         };
-        _libraryManager.CreateItem(folder, folder);
+        _libraryManager.CreateItem(folder, folder);*/
 
         _libraryManager.AddVirtualFolder(
             name,
@@ -118,7 +120,6 @@ public class LibrarySync
         );
         _libraryManager.AddMediaPath(name, new MediaPathInfo() { Path = path });
 
-        var localId = _libraryManager.GetNewItemId(path, typeof(Folder));
         Plugin.Instance!.RemoteLibraries[localId] = new RemoteLibrary()
         {
             LocalId = localId,
@@ -127,13 +128,14 @@ public class LibrarySync
         };
     }
 
-    private async Task<HashSet<BaseItemDto>> GetRemoteLibraries(
+    private async Task<IEnumerable<BaseItemDto>> GetRemoteLibraries(
         Uri remoteAddress,
         Guid apiKey,
         CancellationToken cancellationToken
     )
     {
         var path = $"/Library/MediaFolders?api_key={apiKey:N}";
+        var server = Plugin.Instance!.RemoteServers[remoteAddress];
 
         var mediaFolders = await _httpClient.GetFromJsonAsync<QueryResult<BaseItemDto>>(
             new Uri(remoteAddress, path),
@@ -144,8 +146,8 @@ public class LibrarySync
             .Items.Where(
                 mediaFolder =>
                     mediaFolder.Type == BaseItemKind.CollectionFolder
-                    && !mediaFolder.Name.Contains("Jellyshare")
+                    && server.Libraries.Contains(mediaFolder.Name)
             )
-            .ToHashSet();
+            .ToList();
     }
 }

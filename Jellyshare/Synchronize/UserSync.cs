@@ -34,9 +34,13 @@ public class UserSync
     public async Task SyncUsers(CancellationToken cancellationToken)
     {
         var instance = Plugin.Instance!;
-        foreach (var (remoteAddress, apiKey) in instance.RemoteServers)
+        foreach (var server in instance.RemoteServers.Values)
         {
-            var remoteUsers = await GetRemoteUsers(remoteAddress, apiKey, cancellationToken);
+            var remoteUsers = await GetRemoteUsers(
+                server.Address,
+                server.ApiKey,
+                cancellationToken
+            );
             var servername = _applicationHost.FriendlyName;
             foreach (var user in GetLocalUsers())
             {
@@ -51,11 +55,11 @@ public class UserSync
                     var remoteUser = await CreateRemoteUser(
                         username,
                         user.Id.ToString(),
-                        remoteAddress,
-                        apiKey,
+                        server.Address,
+                        server.ApiKey,
                         cancellationToken
                     );
-                    Plugin.Instance!.UserMap[(user.Id, remoteAddress)] = remoteUser.Id;
+                    Plugin.Instance!.UserMap[(user.Id, server.Address)] = remoteUser.Id;
                 }
             }
         }
