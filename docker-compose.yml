@@ -1,0 +1,28 @@
+version: "3.8"
+services:
+  jellyfin_1:
+    image: "jellyfin/jellyfin:10.8.13"
+    ports:
+      - "8081:8096"
+    volumes:
+      - "./Jellyshare/bin/Debug/net6.0/Jellyshare.dll:/config/plugins/Jellyshare/Jellyshare.dll:ro"
+      - "./DevData/Media/1:/media:ro"
+      - "./DevData/Config/1:/config"
+  
+  jellyfin_2:
+    image: "jellyfin/jellyfin:10.8.13"
+    ports:
+      - "8082:8096"
+    volumes:
+      - "./Jellyshare/bin/Debug/net6.0/Jellyshare.dll:/config/plugins/Jellyshare/Jellyshare.dll:ro"
+      - "./DevData/Media/2:/media:ro"
+      - "./DevData/Config/2:/config"
+
+  jellyfin_3:
+    image: "jellyfin/jellyfin:10.8.13"
+    ports:
+      - "8083:8096"
+    volumes:
+      - "./Jellyshare/bin/Debug/net6.0/Jellyshare.dll:/config/plugins/Jellyshare/Jellyshare.dll:ro"
+      - "./DevData/Media/3:/media:ro"
+      - "./DevData/Config/3:/config"
