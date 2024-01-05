@@ -56,3 +56,7 @@ take around 10-15 seconds.
 If an error occurs at any step, check the latest log file. Feel free to create
 an issue with all your relevant information, but remember that this software is
 freely provided and I provide no guarantee of support.
+
+# License
+
+Licensed under AGPL-3.0-or-later. The license can be found at /COPYING.
