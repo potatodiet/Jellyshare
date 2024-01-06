@@ -1,16 +1,12 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Data.Entities;
-using Jellyfin.Data.Enums;
 using Jellyfin.Extensions.Json;
+using Jellyshare.State;
 using MediaBrowser.Controller;
-using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 
 namespace Jellyshare.Synchronize;
@@ -19,71 +15,36 @@ public class UserSync
 {
     private readonly HttpClient _httpClient;
     private readonly IServerApplicationHost _applicationHost;
-    private readonly IUserManager _userManager;
+    private readonly StateManager _stateManager;
 
     public UserSync(
         HttpClient httpClient,
         IServerApplicationHost applicationHost,
-        IUserManager userManager
+        StateManager stateManager
     )
     {
         _httpClient = httpClient;
         _applicationHost = applicationHost;
-        _userManager = userManager;
+        _stateManager = stateManager;
     }
 
     public async Task SyncUsers(CancellationToken cancellationToken)
     {
-        var instance = Plugin.Instance!;
-        foreach (var server in instance.RemoteServers.Values)
+        foreach (var server in _stateManager.RemoteServers.Values)
         {
-            var remoteUsers = await GetRemoteUsers(
-                server.Address,
-                server.ApiKey,
-                cancellationToken
-            );
-            var servername = _applicationHost.FriendlyName;
-            foreach (var user in GetLocalUsers())
+            if (server.User == Guid.Empty)
             {
-                if (user.Username.Contains("Jellyshare"))
-                {
-                    continue;
-                }
-
-                var username = $"Jellyshare {servername} {user.Username}";
-                if (!remoteUsers.Contains(username))
-                {
-                    var remoteUser = await CreateRemoteUser(
-                        username,
-                        user.Id.ToString(),
-                        server.Address,
-                        server.ApiKey,
-                        cancellationToken
-                    );
-                    Plugin.Instance!.UserMap[(user.Id, server.Address)] = remoteUser.Id;
-                }
+                var user = await CreateRemoteUser(
+                    $"Jellyshare {_applicationHost.FriendlyName}",
+                    Guid.NewGuid().ToString(),
+                    server.Address,
+                    server.ApiKey,
+                    cancellationToken
+                );
+                server.User = user.Id;
             }
         }
-    }
-
-    private async Task<HashSet<string>> GetRemoteUsers(
-        Uri remoteAddress,
-        Guid apiKey,
-        CancellationToken cancellationToken
-    )
-    {
-        var path = $"/Users?isHidden=true&api_key={apiKey:N}";
-        var users = await _httpClient.GetFromJsonAsync<List<UserDto>>(
-            new Uri(remoteAddress, path),
-            JsonDefaults.Options,
-            cancellationToken
-        );
-        return users!.Select(user => user.Name).ToHashSet();
-    }
-
-    private IEnumerable<User> GetLocalUsers()
-    {
-        return _userManager.Users;
+        await _stateManager.Save(cancellationToken);
     }
 
     private async Task<UserDto> CreateRemoteUser(

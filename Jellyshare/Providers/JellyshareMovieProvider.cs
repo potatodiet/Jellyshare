@@ -7,6 +7,7 @@ using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Extensions.Json;
+using Jellyshare.State;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
@@ -23,16 +24,19 @@ public class JellyShareProvider : IRemoteMetadataProvider<Movie, MovieInfo>, IHa
     private readonly HttpClient _httpClient;
     private readonly ILogger<JellyShareProvider> _logger;
     private readonly ILibraryManager _libraryManager;
+    private readonly StateManager _stateManager;
 
     public JellyShareProvider(
         HttpClient httpClient,
         ILogger<JellyShareProvider> logger,
-        ILibraryManager libraryManager
+        ILibraryManager libraryManager,
+        StateManager stateManager
     )
     {
         _httpClient = httpClient;
         _logger = logger;
         _libraryManager = libraryManager;
+        _stateManager = stateManager;
     }
 
     public string Name => "Jellyshare";
@@ -71,10 +75,8 @@ public class JellyShareProvider : IRemoteMetadataProvider<Movie, MovieInfo>, IHa
         var query = new InternalItemsQuery() { Path = info.Path };
         var item = _libraryManager.GetItemList(query).First();
 
-        var userId = Plugin
-            .Instance!.UserMap.First(pair => pair.Key.RemoteAddress == remoteAddress)
-            .Value;
-        var apiKey = Plugin.Instance!.RemoteServers[remoteAddress].ApiKey;
+        var userId = _stateManager.RemoteServers[remoteAddress].User;
+        var apiKey = _stateManager.RemoteServers[remoteAddress].ApiKey;
         var address = new Uri(
             remoteAddress,
             $"/Users/{userId}/Items/{remoteId}?api_key={apiKey:N}"

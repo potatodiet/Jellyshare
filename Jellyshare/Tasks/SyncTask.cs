@@ -1,14 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyshare.State;
 using Jellyshare.Synchronize;
-using MediaBrowser.Controller;
-using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Jellyshare.Tasks;
 
@@ -22,18 +19,19 @@ public class SyncTask : IScheduledTask
     private readonly LibrarySync _librarySync;
     private readonly UserSync _userSync;
     private readonly VideoSync _videoSync;
+    private readonly StateManager _stateManager;
 
     public SyncTask(
-        ILibraryManager libraryManager,
-        IServerApplicationHost applicationHost,
-        IUserManager userManager,
-        HttpClient httpClient,
-        ILogger<SyncTask> logger
+        LibrarySync librarySync,
+        UserSync userSync,
+        VideoSync videoSync,
+        StateManager stateManager
     )
     {
-        _librarySync = new LibrarySync(httpClient, libraryManager, logger);
-        _userSync = new UserSync(httpClient, applicationHost, userManager);
-        _videoSync = new VideoSync(httpClient, libraryManager, logger);
+        _librarySync = librarySync;
+        _userSync = userSync;
+        _videoSync = videoSync;
+        _stateManager = stateManager;
     }
 
     // Create some dummy video file for each remote video.
@@ -45,7 +43,7 @@ public class SyncTask : IScheduledTask
         await _librarySync.SyncLibraries(cancellationToken);
         await _userSync.SyncUsers(cancellationToken);
         await _videoSync.SyncVideos(cancellationToken);
-        await Plugin.Instance!.SaveState(cancellationToken);
+        await _stateManager.Save(cancellationToken);
     }
 
     public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => Enumerable.Empty<TaskTriggerInfo>();

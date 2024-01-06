@@ -7,16 +7,20 @@ namespace Jellyshare.State;
 
 public class Startup : IServerEntryPoint
 {
+    private readonly StateManager _stateManager;
+
+    public Startup(StateManager stateManager)
+    {
+        _stateManager = stateManager;
+    }
+
     public void Dispose()
     {
-        Plugin.Instance?.RemoteVideos.Clear();
-        Plugin.Instance?.UserMap.Clear();
         GC.SuppressFinalize(this);
     }
 
     public async Task RunAsync()
     {
-        await Plugin.Instance!.LoadState(CancellationToken.None);
-        Plugin.Instance!.RefreshRemoteVideos();
+        await _stateManager.Refresh(CancellationToken.None);
     }
 }

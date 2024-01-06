@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Jellyshare.State;
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
 
 namespace Jellyshare.Api;
@@ -13,7 +14,10 @@ public class HijackConstraint : IActionConstraint
 
     public bool Accept(ActionConstraintContext context)
     {
-        var items = Plugin.Instance!.RemoteVideos;
+        var stateManager =
+            context.RouteContext.HttpContext.RequestServices.GetService(typeof(StateManager))
+            as StateManager;
+        var items = stateManager.RemoteVideos;
         var path = context.RouteContext.HttpContext.Request.Path.ToString();
         foreach (var match in _guidRegex.Matches(path).Cast<Match?>())
         {

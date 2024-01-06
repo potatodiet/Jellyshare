@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -24,45 +25,43 @@ public class LibrarySync
 {
     private readonly HttpClient _httpClient;
     private readonly ILibraryManager _libraryManager;
-    private readonly ILogger<SyncTask> _logger;
+    private readonly StateManager _stateManager;
+    private readonly ILogger<LibrarySync> _logger;
 
     public LibrarySync(
         HttpClient httpClient,
         ILibraryManager libraryManager,
-        ILogger<SyncTask> logger
+        StateManager stateManager,
+        ILogger<LibrarySync> logger
     )
     {
         _httpClient = httpClient;
         _libraryManager = libraryManager;
+        _stateManager = stateManager;
         _logger = logger;
     }
 
     public async Task SyncLibraries(CancellationToken cancellationToken)
     {
-        var instance = Plugin.Instance!;
-        foreach (var server in instance.RemoteServers.Values)
+        var localLibraries = GetLocalLibraries();
+        _logger.LogInformation("Hit LibrarySync");
+        foreach (var server in _stateManager.RemoteServers.Values)
         {
-            var remoteLibraries = await GetRemoteLibraries(
-                server.Address,
-                server.ApiKey,
-                cancellationToken
-            );
-            var localLibraries = GetLocalLibraries();
-
-            foreach (var remoteLibrary in remoteLibraries)
+            _logger.LogInformation($"Each: {server.Address}");
+            var remoteLibraries = await GetRemoteLibraries(server, cancellationToken);
+            foreach (var (libraryId, libraryName) in server.Libraries)
             {
-                var name = $"{server.Address.Host} {remoteLibrary.Name}";
-                if (!localLibraries.Contains(name))
+                if (!localLibraries.Contains(libraryName))
                 {
-                    CreateLocalLibrary(remoteLibrary, server.Address);
-                    localLibraries.Add(name);
+                    var remoteLibrary = remoteLibraries[libraryId];
+                    CreateLocalLibrary(remoteLibrary, server.Address, libraryName);
                 }
             }
         }
-        await Plugin.Instance!.SaveState(cancellationToken);
+        await _stateManager.Refresh(cancellationToken);
     }
 
-    private HashSet<string> GetLocalLibraries()
+    private IEnumerable<string> GetLocalLibraries()
     {
         return _libraryManager
             .GetUserRootFolder()
@@ -71,7 +70,7 @@ public class LibrarySync
             .ToHashSet();
     }
 
-    private void CreateLocalLibrary(BaseItemDto remoteLibrary, Uri remoteAddress)
+    private void CreateLocalLibrary(BaseItemDto remoteLibrary, Uri remoteAddress, string localName)
     {
         var collectionType = remoteLibrary.CollectionType switch
         {
@@ -82,16 +81,11 @@ public class LibrarySync
                     "The only libraries supported are movies, and tvshows."
                 )
         };
-        var name = $"{remoteAddress.Host} {remoteLibrary.Name}";
-        var path = Path.Combine(
-            Plugin.Instance!.DataFolderPath,
-            "Libraries",
-            Guid.NewGuid().ToString("N")
-        );
+        var path = Path.Combine(Plugin.Instance!.DataFolderPath, "Libraries", localName);
         Directory.CreateDirectory(path);
 
         _libraryManager.AddVirtualFolder(
-            name,
+            localName,
             collectionType,
             new LibraryOptions()
             {
@@ -119,26 +113,17 @@ public class LibrarySync
         };
     }
 
-    private async Task<IEnumerable<BaseItemDto>> GetRemoteLibraries(
-        Uri remoteAddress,
-        Guid apiKey,
+    private async Task<Dictionary<Guid, BaseItemDto>> GetRemoteLibraries(
+        RemoteServer server,
         CancellationToken cancellationToken
     )
     {
-        var path = $"/Library/MediaFolders?api_key={apiKey:N}";
-        var server = Plugin.Instance!.RemoteServers[remoteAddress];
-
+        var path = $"/Library/MediaFolders?api_key={server.ApiKey:N}";
         var mediaFolders = await _httpClient.GetFromJsonAsync<QueryResult<BaseItemDto>>(
-            new Uri(remoteAddress, path),
+            new Uri(server.Address, path),
             JsonDefaults.Options,
             cancellationToken
         );
-        return mediaFolders!
-            .Items.Where(
-                mediaFolder =>
-                    mediaFolder.Type == BaseItemKind.CollectionFolder
-                    && server.Libraries.Contains(mediaFolder.Name)
-            )
-            .ToList();
+        return mediaFolders!.Items.ToDictionary(item => item.Id, item => item);
     }
 }

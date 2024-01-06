@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using Jellyshare.State;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -20,16 +21,19 @@ public class StreamHijackController : ControllerBase
     private readonly HttpClient _httpClient;
     private readonly ILibraryManager _libraryManager;
     private readonly ILogger<StreamHijackController> _logger;
+    private readonly StateManager _stateManager;
 
     public StreamHijackController(
         HttpClient httpClient,
         ILibraryManager libraryManager,
-        ILogger<StreamHijackController> logger
+        ILogger<StreamHijackController> logger,
+        StateManager stateManager
     )
     {
         _httpClient = httpClient;
         _libraryManager = libraryManager;
         _logger = logger;
+        _stateManager = stateManager;
     }
 
     [Hijack]
@@ -41,12 +45,12 @@ public class StreamHijackController : ControllerBase
     {
         var item = _libraryManager.GetItemById(itemId)!;
         var remoteAddress = new Uri(item.GetProviderId("JellyshareRemoteAddress"));
-        var remoteUser = Plugin.Instance!.UserMap[(userId, remoteAddress)];
+        var remoteUser = _stateManager.RemoteServers[remoteAddress].User;
         var remoteId = Guid.Parse(item.GetProviderId("JellyshareRemoteId"));
 
         var path = $"Items/{remoteId}/PlaybackInfo";
         var query = HttpUtility.ParseQueryString(HttpContext.Request.QueryString.ToString());
-        query["api_key"] = Plugin.Instance!.RemoteServers[remoteAddress].ApiKey.ToString("N");
+        query["api_key"] = _stateManager.RemoteServers[remoteAddress].ApiKey.ToString("N");
         query["UserId"] = remoteUser.ToString("N");
         query["MediaSourceId"] = remoteId.ToString("N");
 
@@ -80,7 +84,7 @@ public class StreamHijackController : ControllerBase
         var path = $"Videos/{remoteId}/{remainder}";
 
         var query = HttpUtility.ParseQueryString(HttpContext.Request.QueryString.ToString());
-        query["api_key"] = Plugin.Instance!.RemoteServers[remoteAddress].ToString();
+        query["api_key"] = _stateManager.RemoteServers[remoteAddress].ApiKey.ToString("N");
         query["MediaSourceId"] = remoteId.ToString("N");
 
         var address = new Uri(remoteAddress, $"{path}?{query}");

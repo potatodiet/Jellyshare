@@ -9,23 +9,87 @@
       id="JellyshareConfigPage"
       data-role="page"
       class="page type-interior pluginConfigurationPage"
-      data-require="emby-input,emby-button,emby-select,emby-checkbox,emby-textarea"
+      data-require="emby-input,emby-button,emby-select,emby-checkbox"
     >
       <div data-role="content">
         <div class="content-primary">
+          <div class="detailSectionHeader">
+            <h2
+              style="
+                margin: 0.6em 0;
+                vertical-align: middle;
+                display: inline-block;
+              "
+            >
+              Remote Servers
+            </h2>
+            <button
+              is="emby-button"
+              type="button"
+              class="fab btnNewKey submit emby-button"
+              style="margin-left: 1em"
+              title="Add"
+              id="AddServer"
+            >
+              <span class="material-icons add" aria-hidden="true"></span>
+            </button>
+          </div>
+
           <form id="JellyshareConfigForm">
-            <div class="inputContainer">
-              <label class="inputLabel inputLabelUnfocused" for="RemoteServers">
-                Remote Servers
-              </label>
-              <textarea
-                id="RemoteServers"
-                type="text"
-                name="RemoteServers"
-                rows="10"
-                class="emby-input"
-                is="emby-input"
-              ></textarea>
+            <div
+              id="JellyshareDefault"
+              class="verticalSection verticalSection-extrabottompadding remoteServer"
+              hidden
+            >
+              <h2>Remote Server</h2>
+
+              <div class="inputContainer">
+                <label class="inputLabel inputLabelUnfocused"> Address </label>
+                <input
+                  type="text"
+                  name="Address"
+                  class="emby-input"
+                  is="emby-input"
+                  placeholder="http://hostname:8096/"
+                />
+              </div>
+
+              <div class="inputContainer">
+                <label class="inputLabel inputLabelUnfocused"> API Key </label>
+                <input
+                  type="text"
+                  name="ApiKey"
+                  class="emby-input"
+                  is="emby-input"
+                  placeholder="00000000-0000-0000-0000-000000000000"
+                />
+              </div>
+
+              <div class="inputContainer">
+                <label class="inputLabel inputLabelUnfocused">
+                  Libraries
+                </label>
+                <input
+                  type="text"
+                  name="Libraries"
+                  class="emby-input"
+                  is="emby-input"
+                  placeholder='[{"RemoteId":"00000000-0000-0000-0000-000000000000","LocalName":"Remote Server&apos;s Movies"}]'
+                />
+              </div>
+
+              <div class="inputContainer" hidden>
+                <label class="inputLabel inputLabelUnfocused">
+                  Hidden User
+                </label>
+                <input
+                  type="text"
+                  name="User"
+                  class="emby-input"
+                  is="emby-input"
+                  value="00000000-0000-0000-0000-000000000000"
+                />
+              </div>
             </div>
 
             <div>
@@ -40,47 +104,110 @@
           </form>
         </div>
       </div>
+
       <script type="text/javascript">
-        var TemplateConfig = {
+        var JellyshareConfigPage = {
           pluginUniqueId: "36700b7b-d95d-4082-821d-cf412466cc6b",
+
+          save: async () => {
+            Dashboard.showLoadingMsg();
+            const config = await ApiClient.getPluginConfiguration(
+              JellyshareConfigPage.pluginUniqueId
+            );
+
+            config.RemoteServers = [];
+            for (const serverNode of document.querySelectorAll(
+              ".remoteServer"
+            )) {
+              let libraries =
+                serverNode.querySelector("[name=Libraries]").value;
+              if (libraries === "") {
+                libraries = "{}";
+              }
+              const server = {
+                Address: serverNode.querySelector("[name=Address]").value,
+                ApiKey: JellyshareConfigPage.normalizeGuid(
+                  serverNode.querySelector("[name=ApiKey]").value
+                ),
+                User: serverNode.querySelector("[name=User]").value,
+                Libraries: JSON.parse(
+                  JellyshareConfigPage.normalizeGuid(libraries)
+                ),
+              };
+              if (server.Address !== "") {
+                config.RemoteServers.push(server);
+              }
+            }
+
+            const result = await ApiClient.updatePluginConfiguration(
+              JellyshareConfigPage.pluginUniqueId,
+              config
+            );
+            Dashboard.processPluginConfigurationUpdateResult(result);
+          },
+
+          load: () => {
+            Dashboard.showLoadingMsg();
+            JellyshareConfigPage.fillServersList();
+            Dashboard.hideLoadingMsg();
+          },
+
+          fillServersList: async () => {
+            const config = await ApiClient.getPluginConfiguration(
+              JellyshareConfigPage.pluginUniqueId
+            );
+            for (const server of config.RemoteServers) {
+              JellyshareConfigPage.addServer(server);
+            }
+          },
+
+          addServer: (server) => {
+            const clone = document
+              .querySelector("#JellyshareDefault")
+              .cloneNode(true);
+            clone.removeAttribute("id");
+            clone.removeAttribute("hidden");
+
+            if (server !== null) {
+              clone.querySelector("[name=Address]").value = server.Address;
+              clone.querySelector("[name=ApiKey]").value = server.ApiKey;
+              clone.querySelector("[name=User]").value = server.User;
+              clone.querySelector("[name=Libraries]").value = JSON.stringify(
+                server.Libraries
+              );
+            }
+
+            const form = document.querySelector("#JellyshareConfigForm");
+            const lastChild = document.querySelector(
+              "#JellyshareConfigForm > div:last-child"
+            );
+            form.insertBefore(clone, lastChild);
+          },
+
+          normalizeGuid: (guid) => {
+            return guid.replaceAll(
+              /([0-z]{8})([0-z]{4})([0-z]{4})([0-z]{4})([0-z]{12})/g,
+              "$1-$2-$3-$4-$5"
+            );
+          },
         };
 
         document
           .querySelector("#JellyshareConfigPage")
           .addEventListener("pageshow", function () {
-            Dashboard.showLoadingMsg();
-            ApiClient.getPluginConfiguration(
-              TemplateConfig.pluginUniqueId
-            ).then(function (config) {
-              document.querySelector("#RemoteServers").value =
-                config.RemoteServersRaw;
-              Dashboard.hideLoadingMsg();
-            });
+            JellyshareConfigPage.load();
+            document
+              .querySelector("#AddServer")
+              .addEventListener("click", () => {
+                JellyshareConfigPage.addServer(null);
+              });
           });
 
         document
           .querySelector("#JellyshareConfigForm")
           .addEventListener("submit", function (e) {
-            Dashboard.showLoadingMsg();
-            ApiClient.getPluginConfiguration(
-              TemplateConfig.pluginUniqueId
-            ).then(function (config) {
-              config.RemoteServersRaw = document
-                .querySelector("#RemoteServers")
-                .value.replaceAll(
-                  /([0-z]{8})([0-z]{4})([0-z]{4})([0-z]{4})([0-z]{12})/g,
-                  "$1-$2-$3-$4-$5"
-                );
-              ApiClient.updatePluginConfiguration(
-                TemplateConfig.pluginUniqueId,
-                config
-              ).then(function (result) {
-                Dashboard.processPluginConfigurationUpdateResult(result);
-              });
-            });
-
             e.preventDefault();
-            return false;
+            JellyshareConfigPage.save();
           });
       </script>
     </div>

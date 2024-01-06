@@ -28,16 +28,19 @@ public class VideoSync
     private readonly HttpClient _httpClient;
     private readonly ILibraryManager _libraryManager;
     private readonly ILogger<SyncTask> _logger;
+    private readonly StateManager _stateManager;
 
     public VideoSync(
         HttpClient httpClient,
         ILibraryManager libraryManager,
-        ILogger<SyncTask> logger
+        ILogger<SyncTask> logger,
+        StateManager stateManager
     )
     {
         _httpClient = httpClient;
         _libraryManager = libraryManager;
         _logger = logger;
+        _stateManager = stateManager;
     }
 
     public async Task SyncVideos(CancellationToken cancellationToken)
@@ -54,9 +57,8 @@ public class VideoSync
                     localVideos.Add(remoteVideo.Id);
                 }
             }
-            _ = library.RefreshMetadata(cancellationToken);
         }
-        Plugin.Instance!.RefreshRemoteVideos();
+        await _stateManager.Refresh(cancellationToken);
     }
 
     private void CreateVideo(BaseItemDto remoteVideo, Folder libraryEntity)
@@ -100,7 +102,7 @@ public class VideoSync
     {
         var address = new Uri(library.GetProviderId("JellyshareRemoteAddress"));
         var externalId = library.GetProviderId("JellyshareRemoteId");
-        var apiKey = Plugin.Instance!.RemoteServers[address].ApiKey;
+        var apiKey = _stateManager.RemoteServers[address].ApiKey;
         var path = $"Items/?api_key={apiKey:N}&ParentId={externalId}";
         var videos = await _httpClient.GetFromJsonAsync<QueryResult<BaseItemDto>>(
             new Uri(address, path),
