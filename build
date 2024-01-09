@@ -1,4 +1,0 @@
-#!/usr/bin/env sh
-dotnet build Jellyshare.sln
-docker compose kill
-docker compose up -d

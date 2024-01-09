@@ -9,7 +9,6 @@ This plugin is in a very early alpha state. Do not expect stability.
 - Is only able to handle Movie libraries.
 - Is not able to handle URL or server name changes.
 - Is not able to handle library name changes.
-- Is only confirmed to support my Apple Silicon Mac with Safari.
 
 # Development
 
@@ -17,6 +16,7 @@ This plugin is in a very early alpha state. Do not expect stability.
 
 - .NET 6+
 - Docker
+- PowerShell
 
 ## Preamble
 
@@ -26,13 +26,14 @@ movies which may be useful for this purpose.
 
 ## Build
 
-    $ ./build
+    $ Scripts/Run
 
 ## Use
 
-Three Jellyfin instances will be running at http://localhost:808{1,2,3}. Access
-each instance and go through their installers. Create a Movie library in each
-instance using the relevant media folders discussed previously in the preamble.
+Three Jellyfin instances will be running at http://localhost:8081,
+http://localhost:8082, and http://localhost:8083. Access each instance and go
+through their installers. Create a Movie library in each instance using the
+relevant media folders discussed previously in the preamble.
 
 Create a new API key for each instance. Pick any instance, access its Jellyshare
 configuration in the Plugins tab, and add two new remote servers. Be warned that

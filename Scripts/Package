@@ -1,0 +1,34 @@
+#!/usr/bin/env pwsh
+function Get-TargetAbi() {
+  return (Select-Xml `
+    -Path "Jellyshare/Jellyshare.csproj" `
+    -XPath "//PackageReference[@Include='Jellyfin.Controller']/@Version"
+    | Select-Object -First 1 –ExpandProperty “node”
+    | Select-Object -ExpandProperty Value) + ".0"
+}
+
+function Get-ReleaseChecksum() {
+  return (Get-FileHash `
+  -Path "Release/Jellyshare-$versionId.zip" `
+  -Algorithm "MD5"
+  | Select -ExpandProperty Hash).ToLower()
+}
+
+dotnet build --configuration Release
+
+$versionId = [DateTime]::UtcNow.ToString("yyyy.MM.dd")
+Compress-Archive `
+  -Force `
+  -Path "Jellyshare/bin/Release/net6.0/Jellyshare.dll" `
+  -DestinationPath "Release/Jellyshare-$versionId.zip"
+
+$manifest = Get-Content "manifest.json" | ConvertFrom-Json
+$version = ConvertTo-Json $manifest.versions[0] | ConvertFrom-Json
+$version.checksum = Get-ReleaseChecksum
+$version.changelog = "Placeholder."
+$version.sourceUrl = "https://github.com/potatodiet/Jellyshare/releases/download/v$versionId/Jellyshare-$versionId.zip"
+$version.targetAbi = Get-TargetAbi
+$version.timestamp = [DateTime]::UtcNow.ToString("s") + "Z"
+$version.version = $versionId
+$manifest.versions = @($version) + $manifest.versions
+$manifest | ConvertTo-Json -Depth 100 | Set-Content "manifest.json"
