@@ -8,7 +8,7 @@
     "overview": "Share libraries between servers.",
     "versions": [
       {
-        "checksum": "ad6db5175f4732308b5dd166f79a1c2d",
+        "checksum": "ce031928afae8abe81da82387d151160",
         "changelog": "Initial release.",
         "targetAbi": "10.8.13.0",
         "sourceUrl": "https://github.com/potatodiet/Jellyshare/releases/download/v2024.01.07/Jellyshare-2024.01.07.zip",
